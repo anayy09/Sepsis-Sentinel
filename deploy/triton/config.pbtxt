@@ -1,0 +1,282 @@
+name: "sepsis_sentinel"
+platform: "onnxruntime_onnx"
+max_batch_size: 128
+version_policy: { all: {} }
+
+# Enable sequence batching for streaming inference
+sequence_batching {
+  max_sequence_idle_microseconds: 5000000
+  oldest: {}
+  control_input [
+    {
+      name: "START"
+      control [
+        {
+          kind: CONTROL_SEQUENCE_START
+          fp32_false_true: [ 0, 1 ]
+        }
+      ]
+    },
+    {
+      name: "END"
+      control [
+        {
+          kind: CONTROL_SEQUENCE_END
+          fp32_false_true: [ 0, 1 ]
+        }
+      ]
+    },
+    {
+      name: "READY"
+      control [
+        {
+          kind: CONTROL_SEQUENCE_READY
+          fp32_false_true: [ 0, 1 ]
+        }
+      ]
+    }
+  ]
+  state [
+    {
+      input_name: "PAST_STATE"
+      output_name: "PRESENT_STATE"
+      data_type: TYPE_FP32
+      dims: [ 256 ]
+      initial_state: {
+        data_type: TYPE_FP32
+        dims: [ 256 ]
+        zero_data: true
+      }
+    }
+  ]
+}
+
+# Input specifications
+input [
+  {
+    name: "tft_features"
+    data_type: TYPE_FP32
+    dims: [ 256 ]
+  },
+  {
+    name: "gnn_features"
+    data_type: TYPE_FP32
+    dims: [ 64 ]
+  },
+  {
+    name: "START"
+    data_type: TYPE_FP32
+    dims: [ 1 ]
+  },
+  {
+    name: "END"
+    data_type: TYPE_FP32
+    dims: [ 1 ]
+  },
+  {
+    name: "READY"
+    data_type: TYPE_FP32
+    dims: [ 1 ]
+  },
+  {
+    name: "PAST_STATE"
+    data_type: TYPE_FP32
+    dims: [ 256 ]
+  }
+]
+
+# Output specifications
+output [
+  {
+    name: "probabilities"
+    data_type: TYPE_FP32
+    dims: [ 1 ]
+  },
+  {
+    name: "PRESENT_STATE"
+    data_type: TYPE_FP32
+    dims: [ 256 ]
+  }
+]
+
+# Instance groups for different deployment scenarios
+instance_group [
+  {
+    # CPU instance for general inference
+    name: "cpu_instance"
+    count: 2
+    kind: KIND_CPU
+  }
+]
+
+# Optional GPU instance group (uncomment if GPU available)
+# instance_group [
+#   {
+#     name: "gpu_instance"
+#     count: 1
+#     kind: KIND_GPU
+#     gpus: [ 0 ]
+#   }
+# ]
+
+# Model optimization settings
+optimization {
+  # Enable execution accelerators
+  execution_accelerators {
+    cpu_execution_accelerator : [ {
+      name : "openvino"
+    } ]
+  }
+  
+  # Graph optimization level
+  graph: {
+    level: 1
+  }
+  
+  # Input/Output memory optimization
+  input_pinned_memory: {
+    enable: true
+  }
+  output_pinned_memory: {
+    enable: true
+  }
+  
+  # CUDA optimization (if using GPU)
+  cuda: {
+    graphs: true
+    busy_wait_events: true
+    graph_spec: {
+      batch_size: 32
+      input [
+        {
+          name: "tft_features"
+          dims: [ 256 ]
+        },
+        {
+          name: "gnn_features"
+          dims: [ 64 ]
+        }
+      ]
+    }
+  }
+}
+
+# Dynamic batching configuration
+dynamic_batching {
+  # Maximum delay before processing batch
+  max_queue_delay_microseconds: 100000
+  
+  # Preferred batch sizes for optimization
+  preferred_batch_size: [ 4, 8, 16, 32, 64 ]
+  
+  # Maximum queue size
+  max_queue_size: 256
+}
+
+# Model warmup configuration
+model_warmup [
+  {
+    name: "sample_request"
+    batch_size: 16
+    inputs: {
+      key: "tft_features"
+      value: {
+        data_type: TYPE_FP32
+        dims: [ 256 ]
+        zero_data: true
+      }
+    }
+    inputs: {
+      key: "gnn_features"
+      value: {
+        data_type: TYPE_FP32
+        dims: [ 64 ]
+        zero_data: true
+      }
+    }
+    inputs: {
+      key: "START"
+      value: {
+        data_type: TYPE_FP32
+        dims: [ 1 ]
+        fp32_data: [ 1 ]
+      }
+    }
+    inputs: {
+      key: "END"
+      value: {
+        data_type: TYPE_FP32
+        dims: [ 1 ]
+        fp32_data: [ 0 ]
+      }
+    }
+    inputs: {
+      key: "READY"
+      value: {
+        data_type: TYPE_FP32
+        dims: [ 1 ]
+        fp32_data: [ 1 ]
+      }
+    }
+    inputs: {
+      key: "PAST_STATE"
+      value: {
+        data_type: TYPE_FP32
+        dims: [ 256 ]
+        zero_data: true
+      }
+    }
+    count: 5
+  }
+]
+
+# Response cache (optional)
+response_cache {
+  enable: true
+}
+
+# Model repository agent (for model updates)
+model_repository_agents {
+  agents [
+    {
+      name: "checksum"
+    }
+  ]
+}
+
+# Default model filename
+default_model_filename: "model.onnx"
+
+# Backend configuration
+backend: "onnxruntime"
+
+# Parameters specific to ONNX Runtime
+parameters [
+  {
+    key: "execution_mode"
+    value: { string_value: "ORT_SEQUENTIAL" }
+  },
+  {
+    key: "inter_op_num_threads"
+    value: { string_value: "4" }
+  },
+  {
+    key: "intra_op_num_threads"
+    value: { string_value: "4" }
+  },
+  {
+    key: "optimization_level"
+    value: { string_value: "all" }
+  },
+  {
+    key: "enable_profiling"
+    value: { string_value: "false" }
+  }
+]
+
+# Version policy for model updates
+version_policy: {
+  specific: {
+    versions: [1]
+  }
+}
