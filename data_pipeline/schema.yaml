@@ -1,0 +1,174 @@
+# MIMIC-IV Data Schema Configuration
+
+# Waveform signals to extract (1Hz sampling)
+waveform:
+  signals:
+    - "II"          # ECG Lead II
+    - "V"           # ECG Lead V
+    - "ABP"         # Arterial Blood Pressure
+    - "PAP"         # Pulmonary Artery Pressure
+    - "CVP"         # Central Venous Pressure
+    - "PLETH"       # Plethysmogram
+    - "RESP"        # Respiration
+
+# EHR tabular data configuration
+ehr:
+  # Laboratory measurements (MIMIC-IV item_ids)
+  lab_items:
+    # Complete Blood Count
+    - 51221  # Hematocrit
+    - 51222  # Hemoglobin
+    - 51248  # MCH
+    - 51249  # MCHC
+    - 51250  # MCV
+    - 51265  # Platelet Count
+    - 51279  # Red Blood Cells
+    - 51301  # White Blood Cells
+    
+    # Basic Metabolic Panel
+    - 50862  # Albumin
+    - 50863  # Alkaline Phosphatase
+    - 50878  # AST
+    - 50885  # Bilirubin, Total
+    - 50912  # Creatinine
+    - 50931  # Glucose
+    - 50960  # Magnesium
+    - 50970  # Phosphate
+    - 50971  # Potassium
+    - 50983  # Sodium
+    - 51006  # Urea Nitrogen
+    
+    # Blood Gas
+    - 50800  # Arterial Base Excess
+    - 50801  # Arterial CO2 Pressure
+    - 50802  # Arterial O2 Pressure
+    - 50803  # Arterial O2 Saturation
+    - 50804  # Arterial pH
+    - 50805  # Calculated Bicarbonate
+    - 50806  # Chloride
+    - 50821  # PO2/FiO2 Ratio
+    
+    # Coagulation
+    - 51237  # INR
+    - 51274  # PT
+    - 51275  # PTT
+    
+    # Cardiac Markers
+    - 51002  # Troponin I
+    - 50911  # CK-MB
+    - 50908  # CK
+    
+    # Inflammatory Markers
+    - 50889  # C-Reactive Protein
+    - 51144  # Procalcitonin
+    - 50809  # Lactate
+    
+  # Vital signs (MIMIC-IV item_ids)
+  vital_items:
+    # Cardiovascular
+    - 220045  # Heart Rate
+    - 220046  # Heart Rate (Echo)
+    - 220047  # Heart Rate (Other)
+    - 220050  # Arterial Blood Pressure systolic
+    - 220051  # Arterial Blood Pressure diastolic
+    - 220052  # Arterial Blood Pressure mean
+    - 220179  # Non Invasive Blood Pressure systolic
+    - 220180  # Non Invasive Blood Pressure diastolic
+    - 220181  # Non Invasive Blood Pressure mean
+    
+    # Respiratory
+    - 220210  # Respiratory Rate
+    - 224684  # Respiratory Rate (spontaneous)
+    - 224685  # Respiratory Rate (Total)
+    - 220277  # O2 saturation pulseoxymetry
+    - 223835  # FiO2
+    
+    # Temperature
+    - 223761  # Temperature Fahrenheit
+    - 223762  # Temperature Celsius
+    
+    # Neurological
+    - 220739  # GCS - Eye Opening
+    - 223900  # GCS - Verbal Response
+    - 223901  # GCS - Motor Response
+    - 198    # GCS Total (older format)
+    
+    # Other
+    - 224642  # Temperature Site
+    - 224289  # Urine Output
+
+# Data processing parameters
+processing:
+  # Time window configuration
+  window_size_minutes: 30  # 30-minute windows
+  sequence_length: 72      # 36 hours = 72 windows
+  prediction_horizon_hours: 6  # Predict 6 hours ahead
+  
+  # Quality filters
+  min_data_points_per_window: 5  # Minimum data points required in a window
+  max_missing_ratio: 0.3         # Maximum ratio of missing data allowed
+  
+  # Normalization
+  normalization_method: "min_max"  # Options: min_max, z_score, robust
+  
+  # Sampling
+  train_test_split: 0.8
+  validation_split: 0.1
+  random_seed: 42
+
+# SOFA score components mapping
+sofa:
+  respiratory:
+    pao2_fio2_item: 50821
+    mechanical_ventilation_items: [720, 721, 722]  # Ventilator mode indicators
+  
+  cardiovascular:
+    map_items: [220052, 220181]  # Mean arterial pressure
+    dopamine_items: [221662]     # Dopamine dose
+    dobutamine_items: [221653]   # Dobutamine dose
+    epinephrine_items: [221289]  # Epinephrine dose
+    norepinephrine_items: [221906]  # Norepinephrine dose
+  
+  hepatic:
+    bilirubin_items: [50885]     # Bilirubin total
+  
+  coagulation:
+    platelet_items: [51265]      # Platelet count
+  
+  neurological:
+    gcs_items: [220739, 223900, 223901, 198]  # GCS components
+  
+  renal:
+    creatinine_items: [50912]    # Creatinine
+    urine_output_items: [224289] # Urine output
+
+# Sepsis-3 criteria
+sepsis3:
+  # SOFA score threshold for sepsis
+  sofa_threshold: 2
+  
+  # qSOFA criteria (for screening)
+  qsofa:
+    respiratory_rate_threshold: 22  # breaths/min
+    systolic_bp_threshold: 100      # mmHg
+    gcs_threshold: 13               # Glasgow Coma Scale
+  
+  # Infection indicators (simplified)
+  infection_indicators:
+    antibiotic_start: true          # Antibiotic administration
+    culture_ordered: true           # Blood culture ordered
+    white_cell_criteria: true      # WBC > 12k or < 4k
+    temperature_criteria: true     # Temp > 38°C or < 36°C
+
+# Output configuration
+output:
+  format: "delta"  # delta, parquet
+  compression: "snappy"
+  partition_columns: ["subject_id"]
+  
+  # File organization
+  training_data_path: "curated/training_data"
+  validation_data_path: "curated/validation_data"
+  test_data_path: "curated/test_data"
+  labels_file: "labels.csv"
+  stats_file: "stats.json"
