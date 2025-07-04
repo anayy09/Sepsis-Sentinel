@@ -1,0 +1,339 @@
+# Sepsis Sentinel Inference Configuration
+
+# Model Configuration
+model:
+  # Model paths
+  checkpoint_path: "./checkpoints/best_model.ckpt"
+  onnx_path: "./models/sepsis_sentinel.onnx"
+  config_path: "./configs/train_tft_gnn.yaml"
+  
+  # Model type
+  model_type: "simplified"  # complete, simplified
+  
+  # Device configuration
+  device: "auto"  # auto, cpu, cuda:0
+  use_half_precision: true
+
+# Inference Configuration
+inference:
+  # Batch processing
+  batch_size: 64
+  max_sequence_length: 72
+  
+  # Prediction settings
+  prediction_threshold: 0.5
+  return_probabilities: true
+  return_attention: true
+  return_explanations: true
+  
+  # Performance settings
+  num_workers: 2
+  pin_memory: true
+  compile_model: false  # PyTorch 2.0 compilation
+  
+  # Output format
+  output_format: "json"  # json, csv, parquet
+  include_metadata: true
+
+# Data Configuration
+data:
+  # Input data paths
+  input_path: "./data/inference/"
+  output_path: "./outputs/predictions/"
+  
+  # Data format
+  input_format: "parquet"  # parquet, csv, json
+  
+  # Feature configuration
+  feature_columns:
+    static:
+      demographics: ["age", "gender", "race", "weight", "height"]
+      admission: ["admission_type", "admission_location", "insurance"]
+    
+    temporal:
+      vitals: ["heart_rate", "systolic_bp", "diastolic_bp", "mean_bp", 
+               "respiratory_rate", "temperature", "spo2", "gcs_total"]
+      labs: ["wbc", "hemoglobin", "hematocrit", "platelets", "sodium", 
+             "potassium", "chloride", "bun", "creatinine", "glucose",
+             "lactate", "ph", "pco2", "po2", "bicarbonate"]
+      waveforms: ["ecg_hr_mean", "ecg_hr_std", "abp_systolic_mean",
+                  "abp_diastolic_mean", "resp_rate_mean", "pleth_spo2_mean"]
+  
+  # Missing value handling
+  missing_value_strategy: "forward_fill"
+  max_missing_ratio: 0.5
+  
+  # Normalization
+  use_saved_stats: true
+  stats_path: "./data/stats.json"
+
+# Real-time Configuration
+realtime:
+  # Streaming settings
+  enable_streaming: false
+  stream_source: "kafka"  # kafka, websocket, mqtt
+  
+  # Kafka configuration
+  kafka:
+    bootstrap_servers: ["localhost:9092"]
+    topic: "sepsis_monitoring"
+    group_id: "sepsis_sentinel"
+    auto_offset_reset: "latest"
+  
+  # WebSocket configuration
+  websocket:
+    host: "localhost"
+    port: 8765
+    path: "/stream"
+  
+  # Processing configuration
+  window_size_minutes: 30
+  prediction_frequency_minutes: 15
+  max_latency_ms: 1000
+  
+  # Buffer settings
+  buffer_size: 1000
+  flush_interval_seconds: 60
+
+# API Configuration
+api:
+  # Server settings
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  reload: false
+  
+  # Performance
+  workers: 4
+  worker_class: "uvicorn.workers.UvicornWorker"
+  max_requests: 1000
+  timeout: 30
+  
+  # Security
+  cors_origins: ["*"]
+  api_key_required: false
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 100
+  
+  # Documentation
+  title: "Sepsis Sentinel API"
+  description: "Early sepsis prediction using multimodal AI"
+  version: "1.0.0"
+  
+  # Endpoints
+  endpoints:
+    health: "/health"
+    predict: "/predict"
+    batch_predict: "/batch-predict"
+    stream: "/stream"
+    explain: "/explain"
+    metrics: "/metrics"
+
+# Monitoring Configuration
+monitoring:
+  # Metrics collection
+  collect_metrics: true
+  metrics_interval_seconds: 60
+  
+  # Performance monitoring
+  track_latency: true
+  track_throughput: true
+  track_memory_usage: true
+  track_gpu_usage: true
+  
+  # Model monitoring
+  track_prediction_distribution: true
+  track_feature_drift: true
+  track_model_performance: true
+  
+  # Alerting
+  alerting:
+    enabled: true
+    latency_threshold_ms: 2000
+    error_rate_threshold: 0.05
+    memory_usage_threshold: 0.85
+  
+  # Logging
+  log_predictions: true
+  log_level: "INFO"
+  log_format: "json"
+  
+  # Storage
+  metrics_storage: "prometheus"  # prometheus, influxdb, cloudwatch
+  logs_storage: "elasticsearch"  # elasticsearch, cloudwatch, file
+
+# Explainability Configuration
+explainability:
+  # SHAP configuration
+  shap:
+    enabled: true
+    explainer_type: "tree"  # tree, linear, deep, kernel
+    max_samples: 100
+    feature_names: "auto"
+    
+    # Output settings
+    save_plots: true
+    plot_format: "png"
+    plot_dpi: 300
+  
+  # Integrated Gradients
+  integrated_gradients:
+    enabled: true
+    steps: 50
+    baseline: "zeros"  # zeros, mean, median
+    
+    # Attribution settings
+    return_convergence_delta: true
+    multiply_by_inputs: true
+  
+  # Feature importance
+  feature_importance:
+    method: "permutation"  # permutation, shap, lime
+    n_repeats: 10
+    random_state: 42
+  
+  # Attention visualization
+  attention:
+    save_attention_maps: true
+    temporal_attention: true
+    spatial_attention: true
+    fusion_attention: true
+
+# Quality Assurance
+quality_assurance:
+  # Model validation
+  validate_inputs: true
+  validate_outputs: true
+  
+  # Data quality checks
+  check_data_drift: true
+  drift_detection_method: "ks_test"  # ks_test, chi2, psi
+  drift_threshold: 0.05
+  
+  # Performance checks
+  check_latency: true
+  check_memory_usage: true
+  check_prediction_distribution: true
+  
+  # Fallback behavior
+  fallback_on_error: true
+  fallback_prediction: 0.1  # Conservative fallback probability
+  
+  # Audit trail
+  log_all_requests: true
+  store_predictions: true
+  retention_days: 90
+
+# Clinical Integration
+clinical:
+  # EHR integration
+  ehr_system: "epic"  # epic, cerner, allscripts
+  
+  # Clinical decision support
+  cds:
+    enabled: true
+    alert_threshold: 0.7
+    alert_message: "High risk of sepsis detected. Consider evaluation."
+    
+    # Recommendation engine
+    recommendations:
+      enabled: true
+      include_labs: true
+      include_interventions: true
+      include_monitoring: true
+  
+  # Clinical workflow
+  workflow:
+    integration_points: ["nursing_station", "physician_dashboard", "alerts"]
+    alert_delivery: ["popup", "pager", "email"]
+    acknowledgment_required: true
+  
+  # Regulatory compliance
+  compliance:
+    hipaa_compliant: true
+    gdpr_compliant: true
+    fda_510k: false  # Set to true if FDA cleared
+    
+    # Audit requirements
+    maintain_audit_log: true
+    data_retention_years: 7
+    anonymize_exported_data: true
+
+# Security Configuration
+security:
+  # Authentication
+  authentication:
+    method: "oauth2"  # oauth2, jwt, api_key
+    provider: "azure_ad"  # azure_ad, google, auth0
+    
+    # Token settings
+    token_expiry_hours: 24
+    refresh_token_enabled: true
+  
+  # Authorization
+  authorization:
+    rbac_enabled: true
+    roles: ["clinician", "admin", "readonly"]
+    
+    # Permissions
+    permissions:
+      predict: ["clinician", "admin"]
+      explain: ["clinician", "admin"]
+      admin: ["admin"]
+  
+  # Data protection
+  data_protection:
+    encrypt_at_rest: true
+    encrypt_in_transit: true
+    encryption_algorithm: "AES-256"
+    
+    # PHI handling
+    mask_phi: true
+    phi_fields: ["patient_id", "mrn", "name", "dob"]
+  
+  # Network security
+  network:
+    use_https: true
+    certificate_path: "./certs/cert.pem"
+    key_path: "./certs/key.pem"
+    
+    # Firewall
+    allowed_ips: []  # Empty list allows all
+    blocked_ips: []
+
+# Deployment Environment
+environment:
+  # Environment type
+  env_type: "production"  # development, staging, production
+  
+  # Infrastructure
+  infrastructure: "kubernetes"  # docker, kubernetes, serverless
+  
+  # Scaling
+  scaling:
+    auto_scaling: true
+    min_replicas: 2
+    max_replicas: 10
+    target_cpu_utilization: 70
+    target_memory_utilization: 80
+  
+  # Health checks
+  health_checks:
+    liveness_probe: "/health/live"
+    readiness_probe: "/health/ready"
+    startup_probe: "/health/startup"
+    
+    # Probe settings
+    initial_delay_seconds: 30
+    period_seconds: 10
+    timeout_seconds: 5
+    failure_threshold: 3
+  
+  # Resource limits
+  resources:
+    cpu_request: "1000m"
+    cpu_limit: "2000m"
+    memory_request: "2Gi"
+    memory_limit: "4Gi"
+    gpu_request: "1"

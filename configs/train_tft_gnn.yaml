@@ -1,0 +1,255 @@
+# Sepsis Sentinel Training Configuration
+
+# Model Architecture
+model:
+  # TFT Configuration
+  static_input_sizes:
+    demographics: 10      # age, gender, race, etc.
+    admission: 5          # admission type, location, etc.
+  
+  temporal_input_sizes:
+    vitals: 15           # heart rate, blood pressure, etc.
+    labs: 25             # laboratory values
+    waveforms: 20        # waveform features
+  
+  # GNN Configuration
+  gnn_node_channels:
+    patient: 20          # static patient features
+    stay: 30             # stay-level features
+    day: 50              # daily aggregated features
+  
+  # Architecture Parameters
+  tft_hidden_size: 256
+  gnn_hidden_channels: 64
+  fusion_hidden_dims: [256, 64]
+  seq_len: 72            # 36 hours of 30-min windows
+  
+  # Attention and Layers
+  num_heads: 8
+  num_lstm_layers: 2
+  gnn_num_layers: 2
+  gnn_heads: 4
+  dropout: 0.1
+
+# Training Configuration
+training:
+  # Basic Parameters
+  batch_size: 256
+  max_epochs: 50
+  learning_rate: 3e-4
+  weight_decay: 1e-2
+  
+  # Hardware Configuration
+  accelerator: "auto"     # auto, gpu, cpu
+  devices: "auto"         # auto, 1, [0,1]
+  strategy: "auto"        # auto, ddp
+  precision: "bf16-mixed" # 32, 16, bf16-mixed
+  
+  # Scheduler Configuration
+  scheduler_type: "cosine_warmup"  # cosine, cosine_warmup, plateau
+  warmup_steps: 1000
+  
+  # Loss Configuration
+  focal_alpha: 0.25
+  focal_gamma: 2.0
+  aux_loss_weight: 0.3
+  
+  # Monitoring and Checkpointing
+  monitor_metric: "val_auroc"
+  save_top_k: 3
+  checkpoint_dir: "./checkpoints"
+  check_val_every_n_epoch: 1
+  
+  # Early Stopping
+  early_stopping:
+    patience: 10
+    min_delta: 0.001
+  
+  # Optimization
+  gradient_clip_val: 1.0
+  accumulate_grad_batches: 1
+  
+  # Stochastic Weight Averaging
+  use_swa: true
+  swa_epoch_start: 30
+  swa_annealing_epochs: 10
+  
+  # Reproducibility
+  random_seed: 42
+  
+  # Debug Options (set to false for production)
+  fast_dev_run: false
+  limit_train_batches: 1.0
+  limit_val_batches: 1.0
+  limit_test_batches: 1.0
+  skip_test: false
+  
+  # Performance
+  num_workers: 4
+  pin_memory: true
+  persistent_workers: true
+  
+  # Profiler (optional)
+  profiler: null  # simple, advanced, pytorch
+
+# Data Configuration
+data:
+  # Data splits
+  train_split: 0.7
+  val_split: 0.15
+  test_split: 0.15
+  
+  # Data loading
+  shuffle_train: true
+  drop_last: false
+  
+  # Augmentation (if applicable)
+  use_augmentation: false
+  noise_std: 0.01
+  
+  # Filtering
+  min_sequence_length: 24  # Minimum 12 hours
+  max_missing_ratio: 0.3
+  
+  # Preprocessing
+  normalize_features: true
+  handle_missing: "forward_fill"  # forward_fill, interpolate, zero
+
+# Logging Configuration
+logging:
+  # Weights & Biases
+  wandb_project: "sepsis-sentinel"
+  wandb_entity: null  # Set your wandb entity
+  experiment_name: "tft-gnn-fusion-v1"
+  log_dir: "./logs"
+  
+  # Tags and metadata
+  tags:
+    - "multimodal"
+    - "sepsis-prediction"
+    - "tft"
+    - "gnn"
+    - "fusion"
+  
+  notes: "Temporal Fusion Transformer + Heterogeneous GNN fusion model for sepsis prediction"
+  
+  # Logging frequency
+  log_every_n_steps: 50
+  save_dir: "./wandb_logs"
+
+# Hyperparameter Search (for Optuna)
+hyperparameter_search:
+  enable: false
+  n_trials: 50
+  direction: "maximize"
+  metric: "val_auroc"
+  
+  # Search space
+  search_space:
+    learning_rate:
+      type: "loguniform"
+      low: 1e-5
+      high: 1e-2
+    
+    dropout:
+      type: "uniform"
+      low: 0.05
+      high: 0.3
+    
+    tft_hidden_size:
+      type: "categorical"
+      choices: [128, 256, 512]
+    
+    gnn_hidden_channels:
+      type: "categorical"
+      choices: [32, 64, 128]
+    
+    num_heads:
+      type: "categorical"
+      choices: [4, 8, 16]
+    
+    focal_gamma:
+      type: "uniform"
+      low: 1.0
+      high: 3.0
+    
+    weight_decay:
+      type: "loguniform"
+      low: 1e-4
+      high: 1e-1
+
+# Evaluation Configuration
+evaluation:
+  # Metrics to compute
+  metrics:
+    - "auroc"
+    - "auprc"
+    - "accuracy"
+    - "precision"
+    - "recall"
+    - "f1"
+    - "specificity"
+    - "npv"
+  
+  # Thresholds for binary classification
+  thresholds: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+  
+  # Bias evaluation
+  bias_evaluation:
+    enable: true
+    protected_attributes:
+      - "gender"
+      - "race"
+      - "age_group"
+    
+    fairness_metrics:
+      - "demographic_parity"
+      - "equalized_odds"
+      - "calibration"
+  
+  # Lead time analysis
+  lead_time_analysis:
+    enable: true
+    time_windows: [1, 2, 3, 4, 5, 6]  # hours
+  
+  # Bootstrap confidence intervals
+  bootstrap:
+    enable: true
+    n_bootstrap: 1000
+    confidence_level: 0.95
+
+# Deployment Configuration
+deployment:
+  # Model export
+  export_onnx: true
+  onnx_opset_version: 17
+  onnx_dynamic_axes: true
+  
+  # Quantization
+  quantization:
+    enable: false
+    method: "dynamic"  # dynamic, static
+  
+  # Triton configuration
+  triton:
+    max_batch_size: 128
+    instance_group_count: 1
+    optimization_level: 2
+    
+    # Backend configuration
+    backend: "onnxruntime"
+    optimization_policy: "aggressive"
+
+# Resource Configuration
+resources:
+  # Memory
+  max_memory_gb: 32
+  shared_memory_size: "2g"
+  
+  # GPU
+  gpu_memory_fraction: 0.9
+  allow_growth: true
+  
+  # CPU
+  num_cpu_cores: 8
+  use_mkldnn: true
