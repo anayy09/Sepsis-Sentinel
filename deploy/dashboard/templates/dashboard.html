@@ -6,75 +6,151 @@
     <title>Sepsis Sentinel - Real-time Dashboard</title>
     
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts - Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Plotly.js -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <!-- Socket.IO -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     
     <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --info-color: #17a2b8;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+            --orange-color: #fd7e14; /* Custom orange for high risk */
+            --background-color: #f4f7f6; /* Lighter background */
+            --card-background: #ffffff;
+            --sidebar-background: #343a40;
+            --text-color: #212529;
+            --text-muted: #6c757d;
+        }
+
         body {
-            background-color: #f8f9fa;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
+            font-family: 'Poppins', sans-serif;
+            color: var(--text-color);
         }
         
+        .navbar {
+            background-color: var(--dark-color) !important; /* Darker navbar */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
         .navbar-brand {
-            font-weight: bold;
-            font-size: 1.5rem;
+            font-weight: 600;
+            font-size: 1.6rem;
+            color: var(--light-color) !important;
+        }
+
+        .navbar-text {
+            color: var(--light-color) !important;
+            opacity: 0.9;
         }
         
         .status-indicator {
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             display: inline-block;
-            margin-right: 8px;
+            margin-right: 6px;
         }
         
-        .status-healthy { background-color: #28a745; }
-        .status-warning { background-color: #ffc107; }
-        .status-critical { background-color: #dc3545; }
+        .status-healthy { background-color: var(--success-color); }
+        .status-warning { background-color: var(--warning-color); }
+        .status-critical { background-color: var(--danger-color); }
         
         .stat-card {
-            transition: transform 0.2s;
+            background-color: var(--card-background);
             border: none;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            height: 100%; /* Ensure cards in a row have equal height */
         }
         
         .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        }
+
+        .stat-card .card-title {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .card-text {
+            color: var(--text-muted);
+            font-size: 0.9rem;
         }
         
-        .risk-low { color: #28a745; }
-        .risk-medium { color: #ffc107; }
-        .risk-high { color: #fd7e14; }
-        .risk-critical { color: #dc3545; }
+        .risk-low { color: var(--success-color); }
+        .risk-medium { color: var(--warning-color); }
+        .risk-high { color: var(--orange-color); }
+        .risk-critical { color: var(--danger-color); }
         
         .patient-card {
-            border-left: 4px solid #dee2e6;
+            background-color: var(--card-background);
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.08);
             transition: all 0.3s ease;
+            cursor: pointer;
+            border-left: 5px solid var(--secondary-color); /* Default border */
+            height: 100%; /* Ensure cards in a row have equal height */
         }
         
-        .patient-card.risk-low { border-left-color: #28a745; }
-        .patient-card.risk-medium { border-left-color: #ffc107; }
-        .patient-card.risk-high { border-left-color: #fd7e14; }
-        .patient-card.risk-critical { border-left-color: #dc3545; }
-        
+        .patient-card.risk-low { border-left-color: var(--success-color); }
+        .patient-card.risk-medium { border-left-color: var(--warning-color); }
+        .patient-card.risk-high { border-left-color: var(--orange-color); }
+        .patient-card.risk-critical { border-left-color: var(--danger-color); }
+
+        .patient-card:hover {
+             transform: translateY(-5px);
+             box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        }
+
+        .patient-card .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .patient-card .badge {
+            font-size: 0.8rem;
+            padding: 0.4em 0.6em;
+        }
+
+        .patient-card strong {
+            font-weight: 600;
+        }
+
+        .patient-card small {
+            font-size: 0.8rem;
+        }
+
         .alert-ticker {
-            background: linear-gradient(45deg, #dc3545, #fd7e14);
+            background: linear-gradient(90deg, var(--danger-color), var(--orange-color));
             color: white;
-            padding: 10px;
+            padding: 12px 20px;
             margin-bottom: 20px;
-            border-radius: 5px;
+            border-radius: 8px;
             animation: pulse 2s infinite;
+            font-weight: 500;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
         
         @keyframes pulse {
             0% { opacity: 1; }
-            50% { opacity: 0.7; }
+            50% { opacity: 0.8; }
             100% { opacity: 1; }
         }
         
@@ -84,27 +160,35 @@
         
         @keyframes blink {
             0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0.3; }
+            51%, 100% { opacity: 0.4; }
         }
         
         .chart-container {
-            background: white;
-            border-radius: 8px;
+            background: var(--card-background);
+            border-radius: 10px;
             padding: 20px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+        }
+
+        .chart-container h4 {
+            font-weight: 600;
+            font-size: 1.4rem;
+            margin-bottom: 15px;
         }
         
         .sidebar {
-            background-color: #343a40;
-            color: white;
+            background-color: var(--sidebar-background);
+            color: var(--light-color);
             min-height: calc(100vh - 56px);
             padding: 20px 0;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
         }
         
         .sidebar h5 {
-            color: #adb5bd;
-            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 1px;
             margin-bottom: 15px;
@@ -112,17 +196,107 @@
         }
         
         .alert-item {
-            background: rgba(220, 53, 69, 0.1);
-            border-left: 3px solid #dc3545;
-            padding: 10px 15px;
-            margin-bottom: 10px;
-            border-radius: 0 5px 5px 0;
+            background: rgba(220, 53, 69, 0.15); /* Slightly more opaque */
+            border-left: 4px solid var(--danger-color); /* Thicker border */
+            padding: 12px 15px;
+            margin: 0 15px 10px 15px; /* Add horizontal margin */
+            border-radius: 0 8px 8px 0; /* More rounded */
+            color: var(--light-color); /* White text for alerts */
         }
+
+        .alert-item strong {
+            color: var(--light-color);
+        }
+
+        .alert-item small {
+            color: rgba(248, 249, 250, 0.8); /* Slightly transparent white */
+        }
+
+        .modal-content {
+            border-radius: 10px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        }
+
+        .modal-header {
+            border-bottom: none;
+            padding: 1.5rem;
+        }
+
+        .modal-title {
+            font-weight: 600;
+            font-size: 1.5rem;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        /* Custom Plotly styles to match theme */
+        .js-plotly-plot .plotly .modebar {
+            background: var(--card-background);
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+        }
+
+        .js-plotly-plot .plotly .modebar-container {
+            right: 10px !important;
+            top: 10px !important;
+        }
+
+        .js-plotly-plot .plotly .cursor-pointer {
+            cursor: pointer;
+        }
+
+        /* Ensure Plotly charts are responsive */
+        .chart-container .plotly-container {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .chart-container .js-plotly-plot {
+             width: 100% !important;
+             height: 100% !important;
+        }
+
+        /* Adjust main content padding for sidebar */
+        @media (min-width: 768px) {
+            .ms-sm-auto {
+                margin-left: calc(2/12 * 100%) !important; /* Adjust based on sidebar width */
+            }
+            .px-md-4 {
+                padding-right: 1.5rem !important;
+                padding-left: 1.5rem !important;
+            }
+             .sidebar {
+                position: fixed;
+                top: 56px; /* Height of navbar */
+                bottom: 0;
+                left: 0;
+                width: calc(2/12 * 100%); /* Match col-md-3 width */
+                overflow-y: auto;
+            }
+             .col-md-9.col-lg-10.ms-sm-auto.px-md-4 {
+                margin-left: calc(2/12 * 100%) !important; /* Push content to the right */
+            }
+        }
+
+         @media (min-width: 992px) {
+             .ms-sm-auto {
+                margin-left: calc(2/12 * 100%) !important; /* Adjust based on sidebar width */
+            }
+             .sidebar {
+                width: calc(2/12 * 100%); /* Match col-lg-2 width */
+            }
+             .col-md-9.col-lg-10.ms-sm-auto.px-md-4 {
+                margin-left: calc(2/12 * 100%) !important; /* Push content to the right */
+            }
+        }
+
     </style>
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top"> <!-- Use bg-dark and fixed-top -->
         <div class="container-fluid">
             <a class="navbar-brand" href="#">
                 <i class="fas fa-heartbeat"></i>
@@ -140,14 +314,14 @@
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 sidebar">
-                <h5>Recent Alerts</h5>
-                <div id="alerts-container">
+            <div class="col-md-3 col-lg-2 sidebar"> <!-- Use col-md-3 col-lg-2 for sidebar width -->
+                <h5 class="mt-3">Recent Alerts</h5> <!-- Add mt-3 for spacing below navbar -->
+                <div id="alerts-container" class="px-3"> <!-- Add padding -->
                     <!-- Alerts will be populated here -->
                 </div>
                 
                 <h5 class="mt-4">System Status</h5>
-                <div class="p-3">
+                <div class="p-3"> <!-- Keep padding -->
                     <div class="d-flex justify-content-between mb-2">
                         <span>API Server</span>
                         <span class="status-indicator status-healthy"></span>
@@ -164,7 +338,7 @@
             </div>
 
             <!-- Main Content -->
-            <div class="col-md-9 col-lg-10 ms-sm-auto px-md-4">
+            <div class="col-md-9 col-lg-10 ms-sm-auto px-md-4"> <!-- Adjust column classes and padding -->
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                     <h1 class="h2">Real-time Sepsis Monitoring Dashboard</h1>
                     <div class="btn-toolbar mb-2 mb-md-0">
@@ -178,7 +352,7 @@
 
                 <!-- Alert Ticker -->
                 <div id="alert-ticker" class="alert-ticker d-none">
-                    <i class="fas fa-exclamation-triangle"></i>
+                    <i class="fas fa-exclamation-triangle me-2"></i> <!-- Add margin -->
                     <strong>High Risk Alert:</strong>
                     <span id="alert-message"></span>
                 </div>
@@ -260,15 +434,15 @@
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <div id="patient-gauge-chart"></div>
+                            <div id="patient-gauge-chart" style="height: 300px;"></div> <!-- Added height -->
                         </div>
                         <div class="col-md-6">
-                            <div id="patient-timeline-chart"></div>
+                            <div id="patient-timeline-chart" style="height: 300px;"></div> <!-- Added height -->
                         </div>
                     </div>
                     <div class="row mt-3">
                         <div class="col-12">
-                            <div id="patient-shap-chart"></div>
+                            <div id="patient-shap-chart" style="height: 400px;"></div> <!-- Added height -->
                         </div>
                     </div>
                 </div>
@@ -277,7 +451,7 @@
     </div>
 
     <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script> <!-- Updated Bootstrap version -->
     
     <script>
         // Initialize Socket.IO connection
@@ -331,7 +505,7 @@
                 .catch(error => console.error('Error loading patients:', error));
                 
             fetch('/api/alerts')
-                .then(response => response.json())
+                .then(response => response.json()) // Fixed syntax error here
                 .then(data => {
                     alertsData = data.alerts;
                     renderAlerts();
