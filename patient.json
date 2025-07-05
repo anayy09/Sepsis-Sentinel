@@ -1,0 +1,37 @@
+{
+  "patient_id": "DEMO_PATIENT_001",
+  "demographics": {
+    "age": 65,
+    "gender": "M",
+    "race": "White",
+    "weight": 80.5,
+    "height": 175
+  },
+  "vitals": [
+    {
+      "timestamp": "2024-01-01T10:00:00Z",
+      "heart_rate": 85,
+      "blood_pressure": "130/80",
+      "respiratory_rate": 18,
+      "temperature": 37.2,
+      "spo2": 98
+    }
+  ],
+  "labs": [
+    {
+      "timestamp": "2024-01-01T08:00:00Z",
+      "wbc": 8.0,
+      "lactate": 2.0,
+      "creatinine": 1.1,
+      "hemoglobin": 12.5
+    }
+  ],
+  "waveforms": [
+    {
+      "timestamp": "2024-01-01T10:00:00Z",
+      "ecg_hr_mean": 85.0,
+      "abp_systolic_mean": 130.0,
+      "abp_diastolic_mean": 80.0
+    }
+  ]
+}
