@@ -24,8 +24,12 @@ from pytorch_lightning.callbacks import (
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.strategies import DDPStrategy
 
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from lightning_module import SepsisSentinelLightning
-from ..data_pipeline.data_module import SepsisDataModule
+from data_pipeline.data_module import SepsisDataModule
 
 # Suppress warnings
 warnings.filterwarnings("ignore", category=UserWarning)

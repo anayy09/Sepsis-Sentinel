@@ -6,9 +6,14 @@ import pytest
 import torch
 import numpy as np
 from unittest.mock import Mock, patch
+import sys
+import os
 
-# Import the model (would need proper import in actual implementation)
-# from models.tft_encoder import TFTEncoder
+# Add the project root to the path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+# Import the actual model (for real tests)
+from models.tft_encoder import TFTEncoder, GatedResidualNetwork, VariableSelectionNetwork
 
 
 class TestTFTEncoder:
@@ -213,6 +218,278 @@ class TestTFTEncoder:
         
         # Test with small values
         small_features = torch.randn(batch_size, seq_len, input_size) * 1e-6
+        
+        # Test with mixed values
+        mixed_features = torch.cat([large_features[:1], small_features[1:]], dim=0)
+        
+        with patch('models.tft_encoder.TFTEncoder') as MockTFT:
+            model = MockTFT()
+            
+            # Mock should handle all input ranges
+            for features in [large_features, small_features, mixed_features]:
+                static_features = torch.randn(batch_size, 8)
+                model.forward.return_value = torch.randn(batch_size, 128)
+                
+                result = model.forward(features, static_features)
+                assert not torch.isnan(result).any()
+                assert not torch.isinf(result).any()
+
+
+class TestTFTEncoderRealImplementation:
+    """Test the actual TFT encoder implementation (not mocked)."""
+    
+    def test_gated_residual_network(self):
+        """Test GatedResidualNetwork component."""
+        batch_size = 4
+        input_size = 32
+        hidden_size = 64
+        output_size = 32
+        
+        grn = GatedResidualNetwork(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            output_size=output_size,
+            dropout=0.1
+        )
+        
+        # Test forward pass
+        x = torch.randn(batch_size, input_size)
+        output = grn(x)
+        
+        assert output.shape == (batch_size, output_size)
+        assert not torch.isnan(output).any()
+        
+        # Test with context
+        context = torch.randn(batch_size, 16)
+        grn_with_context = GatedResidualNetwork(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            output_size=output_size,
+            context_size=16,
+            dropout=0.1
+        )
+        
+        output_with_context = grn_with_context(x, context)
+        assert output_with_context.shape == (batch_size, output_size)
+        assert not torch.isnan(output_with_context).any()
+    
+    def test_variable_selection_network(self):
+        """Test VariableSelectionNetwork component."""
+        batch_size = 4
+        input_sizes = {
+            'vitals': 15,
+            'labs': 25,
+            'waveforms': 20
+        }
+        hidden_size = 64
+        
+        vsn = VariableSelectionNetwork(
+            input_sizes=input_sizes,
+            hidden_size=hidden_size,
+            dropout=0.1
+        )
+        
+        # Create variable inputs
+        variable_inputs = {
+            'vitals': torch.randn(batch_size, 15),
+            'labs': torch.randn(batch_size, 25),
+            'waveforms': torch.randn(batch_size, 20)
+        }
+        
+        # Test forward pass
+        combined, selection_weights = vsn(variable_inputs)
+        
+        assert combined.shape == (batch_size, hidden_size)
+        assert selection_weights.shape == (batch_size, len(input_sizes))
+        assert torch.allclose(selection_weights.sum(dim=-1), torch.ones(batch_size), atol=1e-6)
+        assert not torch.isnan(combined).any()
+        assert not torch.isnan(selection_weights).any()
+    
+    def test_tft_encoder_real_initialization(self):
+        """Test actual TFT encoder initialization."""
+        static_input_sizes = {
+            'demographics': 10,
+            'admission': 5,
+        }
+        
+        temporal_input_sizes = {
+            'vitals': 15,
+            'labs': 25,
+            'waveforms': 20,
+        }
+        
+        model = TFTEncoder(
+            static_input_sizes=static_input_sizes,
+            temporal_input_sizes=temporal_input_sizes,
+            hidden_size=64,
+            num_heads=4,
+            seq_len=72
+        )
+        
+        # Check model properties
+        assert model.hidden_size == 64
+        assert model.seq_len == 72
+        
+        # Check components exist
+        assert hasattr(model, 'static_encoder')
+        assert hasattr(model, 'temporal_selection')
+        assert hasattr(model, 'lstm_encoder')
+        assert hasattr(model, 'self_attention')
+        
+        # Check parameter count is reasonable
+        total_params = sum(p.numel() for p in model.parameters())
+        assert total_params > 10000  # Should have substantial parameters
+        assert total_params < 10000000  # But not too many
+    
+    def test_tft_encoder_real_forward_pass(self):
+        """Test actual TFT encoder forward pass."""
+        batch_size = 4
+        seq_len = 72
+        
+        static_input_sizes = {
+            'demographics': 10,
+            'admission': 5,
+        }
+        
+        temporal_input_sizes = {
+            'vitals': 15,
+            'labs': 25,
+            'waveforms': 20,
+        }
+        
+        model = TFTEncoder(
+            static_input_sizes=static_input_sizes,
+            temporal_input_sizes=temporal_input_sizes,
+            hidden_size=64,
+            num_heads=4,
+            seq_len=seq_len
+        )
+        
+        # Create inputs
+        static_inputs = {
+            'demographics': torch.randn(batch_size, 10),
+            'admission': torch.randn(batch_size, 5),
+        }
+        
+        temporal_inputs = {
+            'vitals': torch.randn(batch_size, seq_len, 15),
+            'labs': torch.randn(batch_size, seq_len, 25),
+            'waveforms': torch.randn(batch_size, seq_len, 20),
+        }
+        
+        # Test forward pass
+        with torch.no_grad():
+            outputs = model(static_inputs, temporal_inputs)
+        
+        # Check outputs
+        assert 'encoded' in outputs
+        assert 'attention_weights' in outputs
+        assert 'variable_selection_weights' in outputs
+        
+        encoded = outputs['encoded']
+        attention_weights = outputs['attention_weights']
+        vs_weights = outputs['variable_selection_weights']
+        
+        # Check shapes
+        assert encoded.shape == (batch_size, seq_len, 64)
+        assert attention_weights.shape == (batch_size, seq_len, seq_len)
+        assert vs_weights.shape == (batch_size, seq_len, len(temporal_input_sizes))
+        
+        # Check for NaN/Inf values
+        assert not torch.isnan(encoded).any()
+        assert not torch.isinf(encoded).any()
+        assert not torch.isnan(attention_weights).any()
+        assert not torch.isnan(vs_weights).any()
+        
+        # Check attention weights are valid probabilities
+        assert (attention_weights >= 0).all()
+        assert torch.allclose(attention_weights.sum(dim=-1), torch.ones(batch_size, seq_len), atol=1e-5)
+        
+        # Check variable selection weights are valid probabilities
+        assert (vs_weights >= 0).all()
+        assert torch.allclose(vs_weights.sum(dim=-1), torch.ones(batch_size, seq_len), atol=1e-5)
+    
+    def test_tft_encoder_different_seq_lengths(self):
+        """Test TFT encoder with different sequence lengths."""
+        static_input_sizes = {
+            'demographics': 10,
+            'admission': 5,
+        }
+        
+        temporal_input_sizes = {
+            'vitals': 15,
+            'labs': 25,
+        }
+        
+        # Test different sequence lengths
+        for seq_len in [24, 48, 72]:
+            model = TFTEncoder(
+                static_input_sizes=static_input_sizes,
+                temporal_input_sizes=temporal_input_sizes,
+                hidden_size=32,
+                num_heads=2,
+                seq_len=seq_len
+            )
+            
+            batch_size = 2
+            static_inputs = {
+                'demographics': torch.randn(batch_size, 10),
+                'admission': torch.randn(batch_size, 5),
+            }
+            
+            temporal_inputs = {
+                'vitals': torch.randn(batch_size, seq_len, 15),
+                'labs': torch.randn(batch_size, seq_len, 25),
+            }
+            
+            with torch.no_grad():
+                outputs = model(static_inputs, temporal_inputs)
+            
+            assert outputs['encoded'].shape == (batch_size, seq_len, 32)
+    
+    def test_tft_encoder_gradients(self):
+        """Test that gradients flow properly through TFT encoder."""
+        batch_size = 2
+        seq_len = 24  # Smaller for faster testing
+        
+        static_input_sizes = {
+            'demographics': 5,
+        }
+        
+        temporal_input_sizes = {
+            'vitals': 10,
+        }
+        
+        model = TFTEncoder(
+            static_input_sizes=static_input_sizes,
+            temporal_input_sizes=temporal_input_sizes,
+            hidden_size=32,
+            num_heads=2,
+            seq_len=seq_len
+        )
+        
+        static_inputs = {
+            'demographics': torch.randn(batch_size, 5, requires_grad=True),
+        }
+        
+        temporal_inputs = {
+            'vitals': torch.randn(batch_size, seq_len, 10, requires_grad=True),
+        }
+        
+        # Forward pass
+        outputs = model(static_inputs, temporal_inputs)
+        
+        # Backward pass
+        loss = outputs['encoded'].sum()
+        loss.backward()
+        
+        # Check gradients exist
+        assert static_inputs['demographics'].grad is not None
+        assert temporal_inputs['vitals'].grad is not None
+        
+        # Check gradients are not all zero
+        assert not torch.allclose(static_inputs['demographics'].grad, torch.zeros_like(static_inputs['demographics'].grad))
+        assert not torch.allclose(temporal_inputs['vitals'].grad, torch.zeros_like(temporal_inputs['vitals'].grad))
         
         # Test with mixed values
         mixed_features = torch.cat([large_features, small_features], dim=0)

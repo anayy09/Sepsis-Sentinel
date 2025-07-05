@@ -15,9 +15,13 @@ from torchmetrics import AUROC, AveragePrecision, Accuracy, Precision, Recall, F
 from torchmetrics.classification import BinaryConfusionMatrix
 import wandb
 
-from ..models.tft_encoder import TFTEncoder
-from ..models.hetero_gnn import HeteroGNN
-from ..models.fusion_head import SepsisClassificationHead
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from models.tft_encoder import TFTEncoder
+from models.hetero_gnn import HeteroGNN
+from models.fusion_head import FusionHead
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -81,12 +85,9 @@ class SepsisSentinelLightning(pl.LightningModule):
             dropout=dropout
         )
         
-        self.classification_head = SepsisClassificationHead(
-            tft_sequence_dim=seq_len,
-            tft_hidden_dim=tft_hidden_size,
+        self.classification_head = FusionHead(
+            tft_dim=tft_hidden_size,
             gnn_dim=gnn_hidden_channels,
-            sequence_length=seq_len,
-            pooling_strategy='attention',
             hidden_dims=fusion_hidden_dims,
             dropout=dropout,
             focal_loss_alpha=focal_alpha,
@@ -179,10 +180,13 @@ class SepsisSentinelLightning(pl.LightningModule):
         # Use patient-level graph embeddings
         gnn_features = gnn_outputs['graph_embeddings']['patient']
         
+        # Use pooled TFT features for fusion
+        tft_pooled = tft_encoded.mean(dim=1)  # Pool over sequence dimension
+        
         # Classification forward pass
         targets = batch.get('targets', None)
         classification_outputs = self.classification_head(
-            tft_sequence=tft_encoded,
+            tft_features=tft_pooled,
             gnn_features=gnn_features,
             targets=targets,
             return_attention=True
