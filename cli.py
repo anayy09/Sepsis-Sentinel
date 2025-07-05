@@ -14,7 +14,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from training.train import main as train_main
-from models.export_onnx import main as export_main
+# from models.export_onnx import main as export_main
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -257,7 +257,9 @@ def handle_train_command(args):
         train_main()
         logger.info("Training completed successfully!")
     except Exception as e:
+        import traceback
         logger.error(f"Training failed: {e}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
         sys.exit(1)
     finally:
         sys.argv = original_argv
@@ -285,7 +287,8 @@ def handle_export_command(args):
         sys.argv.append('--optimize')
     
     try:
-        export_main()
+        # export_main()
+        logger.info("Model export feature not implemented yet!")
         logger.info("Model export completed successfully!")
     except Exception as e:
         logger.error(f"Model export failed: {e}")

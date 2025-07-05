@@ -28,7 +28,7 @@ class MedicalHeteroGATConv(MessagePassing):
                  concat: bool = True,
                  negative_slope: float = 0.2,
                  dropout: float = 0.0,
-                 add_self_loops: bool = True,
+                 add_self_loops: bool = False,
                  bias: bool = True):
         super().__init__(aggr='add', node_dim=0)
         
@@ -301,8 +301,20 @@ class HeteroGNN(nn.Module):
     
     def _global_pool(self, x: Tensor, batch: Tensor) -> Tensor:
         """Global pooling operation for batched graphs."""
-        from torch_scatter import scatter_mean
-        return scatter_mean(x, batch, dim=0)
+        # Simple manual implementation of scatter_mean for single batch
+        # from torch_scatter import scatter_mean
+        # return scatter_mean(x, batch, dim=0)
+        
+        if batch is None:
+            return x.mean(dim=0, keepdim=True)
+        
+        # Manual scatter mean implementation
+        unique_batch = torch.unique(batch)
+        result = []
+        for b in unique_batch:
+            mask = batch == b
+            result.append(x[mask].mean(dim=0))
+        return torch.stack(result)
 
 
 class MedicalGraphBuilder:

@@ -119,7 +119,7 @@ class SepsisDataset(Dataset):
             
             # Metadata
             'patient_id': f'PATIENT_{idx:06d}',
-            'sample_idx': idx
+            'sample_idx': torch.tensor(idx, dtype=torch.long)
         }
     
     def __len__(self) -> int:
@@ -230,7 +230,7 @@ class SepsisDataModule(pl.LightningDataModule):
             shuffle=True,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
-            persistent_workers=self.persistent_workers,
+            persistent_workers=self.persistent_workers and self.num_workers > 0,
             collate_fn=self.collate_fn,
             drop_last=True
         )
@@ -243,7 +243,7 @@ class SepsisDataModule(pl.LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
-            persistent_workers=self.persistent_workers,
+            persistent_workers=self.persistent_workers and self.num_workers > 0,
             collate_fn=self.collate_fn,
             drop_last=False
         )
@@ -256,7 +256,7 @@ class SepsisDataModule(pl.LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
-            persistent_workers=self.persistent_workers,
+            persistent_workers=self.persistent_workers and self.num_workers > 0,
             collate_fn=self.collate_fn,
             drop_last=False
         )

@@ -36,8 +36,8 @@ training:
   # Basic Parameters
   batch_size: 256
   max_epochs: 50
-  learning_rate: 3e-4
-  weight_decay: 1e-2
+  learning_rate: 0.0003
+  weight_decay: 0.01
   
   # Hardware Configuration
   accelerator: "auto"     # auto, gpu, cpu
@@ -85,9 +85,9 @@ training:
   skip_test: false
   
   # Performance
-  num_workers: 4
+  num_workers: 0
   pin_memory: true
-  persistent_workers: true
+  persistent_workers: false
   
   # Profiler (optional)
   profiler: null  # simple, advanced, pytorch

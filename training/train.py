@@ -28,7 +28,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from lightning_module import SepsisSentinelLightning
+from training.lightning_module import SepsisSentinelLightning
 from data_pipeline.data_module import SepsisDataModule
 
 # Suppress warnings
@@ -130,7 +130,7 @@ def setup_logger(config: Dict) -> WandbLogger:
     return logger
 
 
-def setup_strategy(config: Dict) -> Optional[pl.Strategy]:
+def setup_strategy(config: Dict) -> Optional[pl.strategies.Strategy]:
     """Setup training strategy for multi-GPU training."""
     
     if config['training']['strategy'] == 'ddp' and torch.cuda.device_count() > 1:
@@ -191,7 +191,7 @@ def train_model(config: Dict, data_module: SepsisDataModule) -> pl.LightningModu
         max_epochs=config['training']['max_epochs'],
         accelerator=config['training']['accelerator'],
         devices=config['training']['devices'],
-        strategy=strategy,
+        strategy=strategy or "auto",
         precision=config['training']['precision'],
         
         # Callbacks and logging
@@ -239,10 +239,12 @@ def train_model(config: Dict, data_module: SepsisDataModule) -> pl.LightningModu
     logger.info("Training completed!")
     
     # Test model
-    if not config['training'].get('skip_test', False):
+    if not config['training'].get('skip_test', False) and not config['training'].get('fast_dev_run', False):
         logger.info("Starting testing...")
         trainer.test(model, datamodule=data_module, ckpt_path='best')
         logger.info("Testing completed!")
+    elif config['training'].get('fast_dev_run', False):
+        logger.info("Skipping testing in fast_dev_run mode")
     
     return model
 
