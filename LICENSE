@@ -1,0 +1,63 @@
+MIT License
+
+Copyright (c) 2025 Sepsis Sentinel Project
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+===============================================================================
+
+IMPORTANT MEDICAL DISCLAIMER:
+
+This software is intended for research and educational purposes only. It has
+not been approved by the U.S. Food and Drug Administration (FDA) or any other
+regulatory authority for clinical use. This software is not intended to
+diagnose, treat, cure, or prevent any disease.
+
+CLINICAL USE WARNING:
+- This system should not be used for making clinical decisions without
+  proper validation and regulatory approval
+- Always consult qualified healthcare professionals for medical decisions
+- Ensure compliance with local healthcare regulations and standards
+- Obtain appropriate institutional review board (IRB) approval before
+  using with patient data
+
+DATA PRIVACY AND SECURITY:
+- Ensure HIPAA compliance when handling protected health information (PHI)
+- Implement appropriate data security measures for patient data
+- Follow institutional data governance policies
+- Anonymize or de-identify data as required by applicable regulations
+
+RESEARCH USE:
+- This software is provided for research and educational purposes
+- Users are responsible for ensuring ethical use of the software
+- Proper attribution should be given when using this software in research
+- Follow applicable research ethics guidelines and institutional policies
+
+LIABILITY LIMITATION:
+The authors and contributors of this software disclaim all liability for any
+direct, indirect, incidental, special, exemplary, or consequential damages
+(including, but not limited to, procurement of substitute goods or services;
+loss of use, data, or profits; or business interruption) however caused and
+on any theory of liability, whether in contract, strict liability, or tort
+(including negligence or otherwise) arising in any way out of the use of this
+software, even if advised of the possibility of such damage.
+
+By using this software, you acknowledge that you have read and understood
+these terms and agree to use the software in compliance with all applicable
+laws, regulations, and ethical guidelines.
